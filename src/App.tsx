@@ -187,9 +187,8 @@ export default function App() {
               <button
                 key={c.id}
                 onClick={() => setCrewId(c.id)}
-                className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
-                  c.id === crewId ? 'bg-[#0f2a43] text-white border-[#0f2a43]' : 'bg-white border-slate-300'
-                }`}
+                className={`px-3 py-2 rounded-lg text-sm font-semibold border ${c.id === crewId ? 'bg-[#0f2a43] text-white border-[#0f2a43]' : 'bg-white border-slate-300'
+                  }`}
               >
                 {c.name} · {c.role}
                 {c.stoneHistory ? ' · stone history' : ''}
@@ -264,9 +263,8 @@ export default function App() {
                 <button
                   key={n}
                   onClick={() => set('urineColour', n)}
-                  className={`w-10 h-10 rounded-full border-2 text-sm font-bold ${
-                    form.urineColour === n ? 'border-black scale-110' : 'border-slate-300'
-                  }`}
+                  className={`w-10 h-10 rounded-full border-2 text-sm font-bold ${form.urineColour === n ? 'border-black scale-110' : 'border-slate-300'
+                    }`}
                   style={{ background: URINE_COLOURS[n - 1] }}
                   aria-label={`Urine colour ${n}`}
                 >
@@ -405,33 +403,294 @@ export default function App() {
         <section className="bg-white rounded-xl shadow p-4">
           <h2 className="text-lg font-bold">Body figure — tap the kidneys</h2>
           <div className="flex gap-4 items-start">
-            <svg viewBox="0 0 120 220" className="w-64 shrink-0" role="img" aria-label="Human figure — tap the kidneys">
-              <circle cx={60} cy={22} r={16} fill="#cbd5e1" stroke="#0f2a43" />
-              <rect x={42} y={42} width={36} height={90} rx={16} fill="#cbd5e1" stroke="#0f2a43" />
-              <rect x={38} y={132} width={18} height={80} rx={8} fill="#cbd5e1" stroke="#0f2a43" />
-              <rect x={64} y={132} width={18} height={80} rx={8} fill="#cbd5e1" stroke="#0f2a43" />
-              {/* Transparent hit areas around each kidney — a much bigger tap target than the visible shape. */}
-              <ellipse cx={48} cy={96} rx={20} ry={26} fill="transparent" onClick={() => setKidneyInfo(true)} style={{ cursor: 'pointer' }} />
-              <ellipse cx={72} cy={96} rx={20} ry={26} fill="transparent" onClick={() => setKidneyInfo(true)} style={{ cursor: 'pointer' }} />
+            <svg
+              viewBox="0 0 240 420"
+              className="w-64 shrink-0 select-none"
+              role="img"
+              aria-label="Human figure — tap the kidneys"
+            >
+              <defs>
+                {/* 3D Volumetric Body Silhouette Gradient */}
+                <linearGradient id="sgBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#e2e8f0" />
+                  <stop offset="45%" stopColor="#cbd5e1" />
+                  <stop offset="100%" stopColor="#94a3b8" />
+                </linearGradient>
+
+                {/* Inner Torso Cavity Depth Gradient */}
+                <radialGradient id="sgCavityGrad" cx="50%" cy="48%" r="52%">
+                  <stop offset="0%" stopColor="#0f172a" stopOpacity="0.18" />
+                  <stop offset="70%" stopColor="#1e293b" stopOpacity="0.08" />
+                  <stop offset="100%" stopColor="#334155" stopOpacity="0" />
+                </radialGradient>
+
+                {/* 3D Left Kidney Volumetric Radial Gradient */}
+                <radialGradient id="sgKidneyGradL" cx="35%" cy="30%" r="70%">
+                  <stop offset="0%" stopColor="#f87171" />
+                  <stop offset="28%" stopColor="#dc2626" />
+                  <stop offset="68%" stopColor="#991b1b" />
+                  <stop offset="100%" stopColor="#450a0a" />
+                </radialGradient>
+
+                {/* 3D Right Kidney Volumetric Radial Gradient */}
+                <radialGradient id="sgKidneyGradR" cx="65%" cy="30%" r="70%">
+                  <stop offset="0%" stopColor="#f87171" />
+                  <stop offset="28%" stopColor="#dc2626" />
+                  <stop offset="68%" stopColor="#991b1b" />
+                  <stop offset="100%" stopColor="#450a0a" />
+                </radialGradient>
+
+                {/* Adrenal Gland 3D Gradient */}
+                <linearGradient id="sgAdrenalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#fde68a" />
+                  <stop offset="60%" stopColor="#f59e0b" />
+                  <stop offset="100%" stopColor="#b45309" />
+                </linearGradient>
+
+                {/* Vascular Gradients (Aorta & Vena Cava) */}
+                <linearGradient id="sgAortaGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#991b1b" />
+                  <stop offset="50%" stopColor="#ef4444" />
+                  <stop offset="100%" stopColor="#7f1d1d" />
+                </linearGradient>
+                <linearGradient id="sgVenaGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#1e3a8a" />
+                  <stop offset="50%" stopColor="#3b82f6" />
+                  <stop offset="100%" stopColor="#172554" />
+                </linearGradient>
+
+                {/* Soft 3D Organ & Silhouette Elevation Shadows */}
+                <filter id="sgOrganShadow" x="-25%" y="-25%" width="150%" height="150%">
+                  <feDropShadow dx="0" dy="3" stdDeviation="3.5" floodColor="#0f172a" floodOpacity="0.38" />
+                </filter>
+                <filter id="sgBodyShadow" x="-10%" y="-5%" width="120%" height="112%">
+                  <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#0f2a43" floodOpacity="0.16" />
+                </filter>
+              </defs>
+
+              {/* 1. Anatomical 3D Human Body Silhouette */}
+              <g filter="url(#sgBodyShadow)">
+                {/* Head & Cranium */}
+                <path
+                  d="M120 12 C136 12 146 24 145 40 C144 54 136 66 120 66 C104 66 96 54 95 40 C94 24 104 12 120 12 Z"
+                  fill="url(#sgBodyGrad)"
+                  stroke="#0f2a43"
+                  strokeWidth={2}
+                />
+                {/* Torso, Shoulders, Arms, Pelvis & Legs */}
+                <path
+                  d="M108 65 L106 76 C92 80 68 85 58 98 C49 110 45 135 42 168 C40 188 38 206 43 212 C48 216 54 208 57 190 L65 132 L72 132 C73 154 78 175 78 195 C78 212 72 228 73 248 L75 330 C76 362 78 388 80 400 C82 408 92 408 96 400 C100 385 104 352 106 320 L112 258 L128 258 L134 320 C136 352 140 385 144 400 C148 408 158 408 160 400 C162 388 164 362 165 330 L167 248 C168 228 162 212 162 195 C162 175 167 154 168 132 L175 132 L183 190 C186 208 192 216 197 212 C202 206 200 188 198 168 C195 135 191 110 182 98 C172 85 148 80 134 76 L132 65 Z"
+                  fill="url(#sgBodyGrad)"
+                  stroke="#0f2a43"
+                  strokeWidth={2}
+                  strokeLinejoin="round"
+                />
+              </g>
+
+              {/* 3D Specular Rim Highlight on Silhouette */}
+              <path
+                d="M100 24 C104 16 112 15 120 15 M62 102 C54 114 50 140 47 170 M82 140 C84 168 84 195 80 230"
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                opacity={0.55}
+              />
+
+              {/* 2. Retroperitoneal Cavity & Skeletal Landmarks */}
+              <ellipse cx={120} cy={186} rx={42} ry={58} fill="url(#sgCavityGrad)" />
+
+              {/* Vertebral Column (T11 - L4) */}
+              <g opacity={0.22} fill="#0f2a43">
+                <rect x={115} y={122} width={10} height={7} rx={2} />
+                <rect x={115} y={132} width={10} height={8} rx={2} />
+                <rect x={114} y={143} width={12} height={9} rx={2} />
+                <rect x={114} y={155} width={12} height={10} rx={2} />
+                <rect x={113} y={168} width={14} height={10} rx={2.5} />
+                <rect x={113} y={181} width={14} height={10} rx={2.5} />
+                <rect x={113} y={194} width={14} height={10} rx={2.5} />
+                <rect x={113} y={207} width={14} height={10} rx={2.5} />
+                <rect x={114} y={220} width={12} height={9} rx={2} />
+              </g>
+
+              {/* Lower Ribcage Arcs (T10 - T12) */}
+              <g fill="none" stroke="#475569" strokeWidth={1.6} strokeLinecap="round" opacity={0.3}>
+                <path d="M114 130 C96 132 82 142 78 156" />
+                <path d="M126 130 C144 132 158 142 162 156" />
+                <path d="M114 142 C98 144 85 154 81 166" />
+                <path d="M126 142 C142 144 155 154 159 166" />
+                <path d="M114 154 C102 156 90 163 86 172" />
+                <path d="M126 154 C138 156 150 163 154 172" />
+              </g>
+
+              {/* 3. Vascular System (Inferior Vena Cava, Aorta & Renal Vessels) */}
+              <path
+                d="M115 128 L115 224 L103 242 M115 224 L123 242"
+                fill="none"
+                stroke="url(#sgVenaGrad)"
+                strokeWidth={5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M125 126 L125 224 L115 242 M125 224 L137 242"
+                fill="none"
+                stroke="url(#sgAortaGrad)"
+                strokeWidth={5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path d="M100 185 L125 181" stroke="#dc2626" strokeWidth={3.2} strokeLinecap="round" />
+              <path d="M125 176 L142 179" stroke="#dc2626" strokeWidth={3.2} strokeLinecap="round" />
+              <path d="M100 189 L115 186" stroke="#2563eb" strokeWidth={3.5} strokeLinecap="round" />
+              <path d="M115 181 L142 184" stroke="#2563eb" strokeWidth={3.5} strokeLinecap="round" />
+
+              {/* 4. Ureters & Urinary Bladder */}
+              <path
+                d="M102 191 C106 210 109 230 113 252"
+                fill="none"
+                stroke="#d97706"
+                strokeWidth={2.2}
+                strokeLinecap="round"
+                opacity={0.85}
+              />
+              <path
+                d="M138 185 C134 206 131 228 127 252"
+                fill="none"
+                stroke="#d97706"
+                strokeWidth={2.2}
+                strokeLinecap="round"
+                opacity={0.85}
+              />
+              <path
+                d="M108 250 C108 244 132 244 132 250 C134 260 127 268 120 270 C113 268 106 260 108 250 Z"
+                fill="#f59e0b"
+                fillOpacity={0.35}
+                stroke="#b45309"
+                strokeWidth={1.5}
+              />
+
+              {/* 5. Animated Tap-Indicator Pulse Rings */}
               <ellipse
-                cx={48}
-                cy={96}
-                rx={14}
-                ry={20}
-                fill="#b91c1c"
-                stroke="#7f1d1d"
-                strokeWidth={2}
+                cx={91}
+                cy={186}
+                rx={20}
+                ry={28}
+                fill="none"
+                stroke="#ef4444"
+                strokeWidth={1.5}
+                strokeDasharray="4 3"
+                opacity={0.65}
+              >
+                <animate attributeName="rx" values="18;24;18" dur="2.4s" repeatCount="indefinite" />
+                <animate attributeName="ry" values="26;32;26" dur="2.4s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.7;0.15;0.7" dur="2.4s" repeatCount="indefinite" />
+              </ellipse>
+              <ellipse
+                cx={149}
+                cy={180}
+                rx={20}
+                ry={28}
+                fill="none"
+                stroke="#ef4444"
+                strokeWidth={1.5}
+                strokeDasharray="4 3"
+                opacity={0.65}
+              >
+                <animate attributeName="rx" values="18;24;18" dur="2.4s" repeatCount="indefinite" />
+                <animate attributeName="ry" values="26;32;26" dur="2.4s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.7;0.15;0.7" dur="2.4s" repeatCount="indefinite" />
+              </ellipse>
+
+              {/* 6. Realistic 3D Bean-Shaped Kidneys */}
+              {/* Right Kidney (Viewer's Left — anatomically slightly lower due to liver) */}
+              <g
+                filter="url(#sgOrganShadow)"
+                onClick={() => setKidneyInfo(true)}
+                style={{ cursor: 'pointer' }}
+              >
+                <path
+                  d="M84 162 C86 155 96 155 100 162 C95 164 88 164 84 162 Z"
+                  fill="url(#sgAdrenalGrad)"
+                  stroke="#92400e"
+                  strokeWidth={1}
+                />
+                <path
+                  d="M98 163 C84 161 74 172 75 187 C76 202 85 213 98 210 C104 208 106 201 103 195 C100 191 98 189 98 186 C98 183 100 181 103 177 C106 171 104 164 98 163 Z"
+                  fill="url(#sgKidneyGradL)"
+                  stroke="#450a0a"
+                  strokeWidth={1.8}
+                />
+                <path
+                  d="M88 168 C81 173 79 182 80 193"
+                  fill="none"
+                  stroke="#fecaca"
+                  strokeWidth={2.2}
+                  strokeLinecap="round"
+                  opacity={0.65}
+                />
+                <path
+                  d="M101 179 C97 183 97 189 101 193"
+                  fill="none"
+                  stroke="#fca5a5"
+                  strokeWidth={1.4}
+                  strokeLinecap="round"
+                  opacity={0.5}
+                />
+              </g>
+
+              {/* Left Kidney (Viewer's Right — anatomically slightly higher) */}
+              <g
+                filter="url(#sgOrganShadow)"
+                onClick={() => setKidneyInfo(true)}
+                style={{ cursor: 'pointer' }}
+              >
+                <path
+                  d="M156 156 C154 149 144 149 140 156 C145 158 152 158 156 156 Z"
+                  fill="url(#sgAdrenalGrad)"
+                  stroke="#92400e"
+                  strokeWidth={1}
+                />
+                <path
+                  d="M142 157 C156 155 166 166 165 181 C164 196 155 207 142 204 C136 202 134 195 137 189 C140 185 142 183 142 180 C142 177 140 175 137 171 C134 165 136 158 142 157 Z"
+                  fill="url(#sgKidneyGradR)"
+                  stroke="#450a0a"
+                  strokeWidth={1.8}
+                />
+                <path
+                  d="M152 162 C159 167 161 176 160 187"
+                  fill="none"
+                  stroke="#fecaca"
+                  strokeWidth={2.2}
+                  strokeLinecap="round"
+                  opacity={0.65}
+                />
+                <path
+                  d="M139 173 C143 177 143 183 139 187"
+                  fill="none"
+                  stroke="#fca5a5"
+                  strokeWidth={1.4}
+                  strokeLinecap="round"
+                  opacity={0.5}
+                />
+              </g>
+
+              {/* 7. Transparent Hit Areas Around Each Kidney */}
+              <ellipse
+                cx={91}
+                cy={186}
+                rx={30}
+                ry={38}
+                fill="transparent"
                 onClick={() => setKidneyInfo(true)}
                 style={{ cursor: 'pointer' }}
               />
               <ellipse
-                cx={72}
-                cy={96}
-                rx={14}
-                ry={20}
-                fill="#b91c1c"
-                stroke="#7f1d1d"
-                strokeWidth={2}
+                cx={149}
+                cy={180}
+                rx={30}
+                ry={38}
+                fill="transparent"
                 onClick={() => setKidneyInfo(true)}
                 style={{ cursor: 'pointer' }}
               />
