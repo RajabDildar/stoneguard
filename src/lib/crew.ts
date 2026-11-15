@@ -44,9 +44,12 @@ export function generateHistory(member: CrewMember, endDate: string, days = 14):
     const date = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`
     // Crew-2 (stone history) trends drier over the last 3 days — the demo story.
     const drySpell = member.id === 'crew-2' && i < 3
-    const waterMl = Math.round(
-      (drySpell ? 0.55 + rand() * 0.15 : 0.75 + rand() * 0.35) * member.baselineWaterMl,
-    )
+    // Round to the 50 ml slider step, so the value shown always matches
+    // the value the slider holds.
+    const waterMl =
+      Math.round(
+        ((drySpell ? 0.55 + rand() * 0.15 : 0.75 + rand() * 0.35) * member.baselineWaterMl) / 50,
+      ) * 50
     logs.push({
       subject: `CrewMember/${member.id}`,
       date,

@@ -1,8 +1,8 @@
 /* StoneGuard service worker — cache-first app shell for offline use.
    On install, cache the app shell; on fetch, serve from cache first and
    fall back to the network. No user data is cached or sent anywhere. */
-const CACHE = 'stoneguard-v1'
-const SHELL = ['/', '/index.html', '/manifest.webmanifest']
+const CACHE = 'stoneguard-v2'
+const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

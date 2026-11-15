@@ -18,6 +18,12 @@ import type { CrewMember, DailyLog, DayScore, RiskState } from './types'
  *  - Salt 'high' → +1
  *  - Calcium with meals → −1 (protective; total never below 0)
  *  - Stone history → +1 (thresholds are tighter, and the app says so)
+ *  - Urine volume is collected but NOT scored — the deck's table does not
+ *    score it. It is shown in "Why this score?" as an informational line.
+ *
+ * Every driver above is listed in "Why this score?" on every day, including
+ * the ones that scored 0 — the heading promises "every point, with its
+ * source", so a driver that did not fire still gets a 0-point line.
  *
  * Thresholds (no stone history): 0–2 GREEN, 3–4 AMBER, 5+ RED.
  * Thresholds (stone history):     0–1 GREEN, 2–3 AMBER, 4+ RED.
@@ -86,11 +92,29 @@ export function scoreDay(
     })
   }
 
+  // Urine volume is collected but NOT scored (the deck's table does not
+  // score it) — shown as an informational line so the input is not dead.
+  reasons.push({
+    driver: 'Urine volume',
+    detail: `Urine volume: ${log.urineVolume} — noted, not scored.`,
+    source: SRC_URINE,
+  })
+
   if (log.aredMinutes >= 60 && ratio < 0.9) {
     points += 1
     reasons.push({
       driver: 'Calcium load (proxy)',
-      detail: `${log.aredMinutes} min ARED with low water — exercise drives bone calcium release, and there is less fluid to dilute it. Labelled as a proxy, not a measured calcium value. +1 point.`,
+      detail: `${log.aredMinutes} min ARED with water at ${Math.round(ratio * 100)}% of baseline — exercise drives bone calcium release, and there is less fluid to dilute it. Labelled as a proxy, not a measured calcium value. +1 point.`,
+      source: SRC_BONE,
+    })
+  } else {
+    const why =
+      log.aredMinutes < 60
+        ? `ARED was ${log.aredMinutes} min (under 60 min)`
+        : `water was ${Math.round(ratio * 100)}% of baseline (not under 90%)`
+    reasons.push({
+      driver: 'Calcium load (proxy)',
+      detail: `No point — ${why}, so the calcium-load proxy does not apply. 0 points.`,
       source: SRC_BONE,
     })
   }
@@ -99,7 +123,13 @@ export function scoreDay(
     points += 1
     reasons.push({
       driver: 'Sleep',
-      detail: `${log.sleepHours} h last night — under 6 h. +1 point.`,
+      detail: `${log.sleepHours.toFixed(1)} h last night — under 6 h. +1 point.`,
+      source: SRC_SLEEP,
+    })
+  } else {
+    reasons.push({
+      driver: 'Sleep',
+      detail: `${log.sleepHours.toFixed(1)} h last night — 6 h or more. 0 points.`,
       source: SRC_SLEEP,
     })
   }
@@ -111,13 +141,30 @@ export function scoreDay(
       detail: 'High salt at meals with low fluid — more solute to excrete. +1 point.',
       source: SRC_KIDNEY,
     })
+  } else {
+    reasons.push({
+      driver: 'Salt',
+      detail: `Salt at meals: ${log.salt} — not high. 0 points.`,
+      source: SRC_KIDNEY,
+    })
   }
 
   if (log.calciumWithMeals) {
+    const before = points
     points = Math.max(0, points - 1)
+    const removed = before - points
     reasons.push({
       driver: 'Calcium with meals',
-      detail: 'Calcium taken with meals — protective. −1 point.',
+      detail:
+        removed > 0
+          ? 'Calcium taken with meals — protective. −1 point.'
+          : 'Calcium taken with meals — protective, but the score was already 0, so no points removed.',
+      source: SRC_KIDNEY,
+    })
+  } else {
+    reasons.push({
+      driver: 'Calcium with meals',
+      detail: 'No calcium with meals — no protective point. 0 points.',
       source: SRC_KIDNEY,
     })
   }
@@ -127,6 +174,12 @@ export function scoreDay(
     reasons.push({
       driver: 'Stone history',
       detail: 'You have a personal history of stones, so thresholds are tighter. +1 point.',
+      source: SRC_KIDNEY,
+    })
+  } else {
+    reasons.push({
+      driver: 'Stone history',
+      detail: 'No personal stone history — standard thresholds apply. 0 points.',
       source: SRC_KIDNEY,
     })
   }
@@ -139,9 +192,15 @@ export function scoreDay(
 
   const deficit = Math.max(0, member.baselineWaterMl - log.waterMl)
   const plan: string[] = []
+  // Water: "you hit your baseline" only when water actually reached ≥100%
+  // of baseline; otherwise show the real shortfall.
   if (state === 'GREEN') {
-    plan.push('Keep doing what you did today — you hit your baseline.')
-    plan.push('Calcium with meals, salt only after your ARED session.')
+    if (ratio >= 1) {
+      plan.push('Keep doing what you did today — you hit your baseline.')
+    } else if (deficit > 0) {
+      const first = Math.min(500, deficit)
+      plan.push(`Drink ${deficit} ml more today — ${first} ml by 14:00, the rest by 18:00.`)
+    }
   } else {
     if (deficit > 0) {
       const first = Math.min(500, deficit)
@@ -149,14 +208,22 @@ export function scoreDay(
     } else {
       plan.push('Water is on target — keep sipping through the afternoon.')
     }
-    plan.push('Take calcium with meals, not on an empty stomach.')
+  }
+  // Urine volume is not scored, but a low reading is worth acting on.
+  if (log.urineVolume === 'low') {
+    plan.push('Urine volume is low — keep drinking through the day. (Noted, not scored.)')
+  }
+  plan.push('Take calcium with meals, not on an empty stomach.')
+  // "Salt only after your ARED session" only makes sense on a day with an
+  // ARED session at all.
+  if (log.aredMinutes > 0) {
     plan.push('Salt only after your ARED session, not before it.')
-    if (state === 'AMBER') {
-      plan.push('Re-check tomorrow — one amber day is a warning, not an emergency.')
-    }
-    if (state === 'RED') {
-      plan.push('Notify the Crew Medical Officer today. Do not wait for tomorrow.')
-    }
+  }
+  if (state === 'AMBER') {
+    plan.push('Re-check tomorrow — one amber day is a warning, not an emergency.')
+  }
+  if (state === 'RED') {
+    plan.push('Notify the Crew Medical Officer today. Do not wait for tomorrow.')
   }
   if (cmoFlag && state === 'AMBER') {
     plan.push('AMBER for 3 days in a row — the CMO has been flagged.')

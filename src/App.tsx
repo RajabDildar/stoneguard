@@ -43,7 +43,7 @@ function scoreSeries(member: CrewMember, logs: DailyLog[]): DayScore[] {
 }
 
 export default function App() {
-  const [crewId, setCrewId] = useState('crew-2')
+  const [crewId, setCrewId] = useState('crew-1')
   const [allLogs, setAllLogs] = useState<DailyLog[]>([])
   const [loaded, setLoaded] = useState(false)
   const [online, setOnline] = useState(navigator.onLine)
@@ -91,17 +91,36 @@ export default function App() {
   const todayLog = memberLogs.find((l) => l.date === today) ?? emptyLog(member, today)
   const [form, setForm] = useState<DailyLog>(todayLog)
 
-  // Keep the form in sync when the crew member changes.
+  // Keep the form in sync with the selected crew's stored/seeded log — on
+  // first load AND when the crew changes. (The form is initialised once
+  // from an empty log list, so without this the first paint would show the
+  // hard-coded defaults instead of the crew's real seeded log.)
+  // memberLogs/member/today are intentionally not deps: they only change
+  // when allLogs or crewId change, and a save must not wipe the form.
   useEffect(() => {
+    if (!loaded) return
     setForm(memberLogs.find((l) => l.date === today) ?? emptyLog(member, today))
     setSavedMsg('')
-  }, [crewId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, crewId])
 
   const todayScore = useMemo(() => {
     const prior = scores.filter((s) => s.date < today)
     const streak = prior.length > 0 ? prior[prior.length - 1].amberStreak : 0
     return scoreDay(member, form, streak)
   }, [member, form, scores, today])
+
+  // Has the form been edited since the stored log for today? The trend
+  // list scores the stored log, so an edited-but-unsaved form is a draft.
+  const storedToday = memberLogs.find((l) => l.date === today)
+  const isDirty = useMemo(() => {
+    const base = storedToday ?? emptyLog(member, today)
+    return (
+      (['waterMl', 'urineColour', 'urineVolume', 'salt', 'calciumWithMeals', 'aredMinutes', 'sleepHours'] as const).some(
+        (k) => form[k] !== base[k],
+      )
+    )
+  }, [form, storedToday, member, today])
 
   const save = async () => {
     await saveLog(form)
@@ -189,7 +208,10 @@ export default function App() {
           <div className={`${state.bg} text-white rounded-lg px-4 py-3 mt-2`}>
             <div className="text-xl font-bold">{state.label}</div>
             <div className="text-sm">{state.text}</div>
-            <div className="text-xs opacity-90 mt-1">Score: {todayScore.points} points · relative risk vs your own baseline</div>
+            <div className="text-xs opacity-90 mt-1">Score: {todayScore.points} {todayScore.points === 1 ? 'point' : 'points'} · relative risk vs your own baseline</div>
+            <div className="text-xs opacity-90 mt-1">
+              Thresholds: {member.stoneHistory ? 'GREEN 0–1 · AMBER 2–3 · RED 4+ (stone history — tighter)' : 'GREEN 0–2 · AMBER 3–4 · RED 5+ (no stone history)'}
+            </div>
           </div>
           {todayScore.cmoFlag && (
             <p className="mt-2 text-sm font-semibold text-red-700">
@@ -299,7 +321,7 @@ export default function App() {
                 max={12}
                 step={0.5}
                 value={form.sleepHours}
-                onChange={(e) => set('sleepHours', Number(e.target.value))}
+                onChange={(e) => set('sleepHours', Math.round(Number(e.target.value) * 10) / 10)}
                 className="block w-full mt-1 border rounded px-2 py-1"
               />
             </label>
@@ -332,15 +354,30 @@ export default function App() {
           </p>
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full mt-2" role="img" aria-label="14-day water intake trend">
             <line x1={0} y1={baselineY} x2={W} y2={baselineY} stroke="#0f5e8a" strokeDasharray="5 4" />
+            <text x={W - 4} y={baselineY - 5} textAnchor="end" fontSize="11" fill="#0f5e8a">
+              baseline {member.baselineWaterMl} ml
+            </text>
             <polyline points={pts} fill="none" stroke="#0f2a43" strokeWidth={2} />
             {last14.map((s, i) => {
               const log = memberLogs.find((l) => l.date === s.date)
               const x = last14.length > 1 ? (i / (last14.length - 1)) * (W - 20) + 10 : W / 2
               const y = H - 15 - ((log?.waterMl ?? 0) / maxMl) * (H - 30)
               const fill = s.state === 'RED' ? '#dc2626' : s.state === 'AMBER' ? '#d97706' : '#16a34a'
-              return <circle key={s.date} cx={x} cy={y} r={5} fill={fill} />
+              return (
+                <circle key={s.date} cx={x} cy={y} r={5} fill={fill}>
+                  <title>
+                    {s.date}: {log?.waterMl ?? '?'} ml water, {s.state}, {s.points}{' '}
+                    {s.points === 1 ? 'point' : 'points'}
+                  </title>
+                </circle>
+              )
             })}
           </svg>
+          <div className="flex justify-between text-xs text-slate-500 mt-1">
+            <span>{last14[0]?.date}</span>
+            <span>water (ml) vs baseline</span>
+            <span>{last14[last14.length - 1]?.date}</span>
+          </div>
           <div className="flex gap-4 text-xs mt-1">
             <span><span className="inline-block w-3 h-3 rounded-full bg-green-600 align-middle" /> GREEN</span>
             <span><span className="inline-block w-3 h-3 rounded-full bg-amber-500 align-middle" /> AMBER</span>
@@ -348,11 +385,17 @@ export default function App() {
             <span className="text-slate-500">— dashed: your baseline water</span>
           </div>
           <div className="mt-2 space-y-1">
-            {last14.slice(-5).reverse().map((s) => (
+            {[...last14].reverse().map((s) => (
               <div key={s.date} className="flex justify-between text-sm border-b pb-1">
                 <span>{s.date}</span>
                 <span className="font-semibold">{s.state}</span>
-                <span className="text-slate-500">{s.points} pts</span>
+                {s.date === today && isDirty ? (
+                  <span className="text-amber-600 font-semibold">Unsaved changes</span>
+                ) : (
+                  <span className="text-slate-500">
+                    {s.points} {s.points === 1 ? 'pt' : 'pts'}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -362,16 +405,19 @@ export default function App() {
         <section className="bg-white rounded-xl shadow p-4">
           <h2 className="text-lg font-bold">Body figure — tap the kidneys</h2>
           <div className="flex gap-4 items-start">
-            <svg viewBox="0 0 120 220" className="w-28 shrink-0" role="img" aria-label="Human figure">
+            <svg viewBox="0 0 120 220" className="w-64 shrink-0" role="img" aria-label="Human figure — tap the kidneys">
               <circle cx={60} cy={22} r={16} fill="#cbd5e1" stroke="#0f2a43" />
               <rect x={42} y={42} width={36} height={90} rx={16} fill="#cbd5e1" stroke="#0f2a43" />
               <rect x={38} y={132} width={18} height={80} rx={8} fill="#cbd5e1" stroke="#0f2a43" />
               <rect x={64} y={132} width={18} height={80} rx={8} fill="#cbd5e1" stroke="#0f2a43" />
+              {/* Transparent hit areas around each kidney — a much bigger tap target than the visible shape. */}
+              <ellipse cx={48} cy={96} rx={20} ry={26} fill="transparent" onClick={() => setKidneyInfo(true)} style={{ cursor: 'pointer' }} />
+              <ellipse cx={72} cy={96} rx={20} ry={26} fill="transparent" onClick={() => setKidneyInfo(true)} style={{ cursor: 'pointer' }} />
               <ellipse
                 cx={48}
                 cy={96}
-                rx={9}
-                ry={13}
+                rx={14}
+                ry={20}
                 fill="#b91c1c"
                 stroke="#7f1d1d"
                 strokeWidth={2}
@@ -381,8 +427,8 @@ export default function App() {
               <ellipse
                 cx={72}
                 cy={96}
-                rx={9}
-                ry={13}
+                rx={14}
+                ry={20}
                 fill="#b91c1c"
                 stroke="#7f1d1d"
                 strokeWidth={2}
